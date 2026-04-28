@@ -1,0 +1,20 @@
+# Archivos temporales
+*.pyc
+__pycache__/
+*.log
+
+# Entornos virtuales
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Modelos descargados (si los hubiera)
+*.gguf
+models/

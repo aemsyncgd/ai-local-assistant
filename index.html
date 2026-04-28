@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 Asistente IA Local</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .chat {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #fafafa;
+        }
+
+        .message {
+            margin: 10px 0;
+            padding: 10px 15px;
+            border-radius: 8px;
+            max-width: 85%;
+        }
+
+        .user {
+            background: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+
+        .assistant {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .options {
+            margin: 10px 0;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .status {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat">
+        <h2>🤖 Asistente IA Local <small style="font-size:14px;color:#666"> <span id="modelInfo">Cargando...</span></small></h2>
+        <div class="messages" id="messages"></div>
+        <div class="options">
+            <label><input type="checkbox" id="useFiles"> Usar archivos de ~/ai-shared</label>
+            <span id="fileCount" style="color:#007bff"></span>
+        </div>
+        <div style="font-size:12px;color:#999;margin-bottom:10px">
+            <span id="folderInfo">📁 shared</span>
+        </div>
+        <div class="input-area">
+            <input type="text" id="prompt" placeholder="Escribe tu consulta..."
+                onkeypress="if(event.key==='Enter')send()">
+            <button id="sendBtn" onclick="send()">Enviar</button>
+        </div>
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        const API = '/ask';
+        const messages = document.getElementById('messages');
+        const status = document.getElementById('status');
+        // Cargar info del modelo y carpeta
+            fetch('/health').then(r => r.json()).then(data => {
+            document.getElementById('modelInfo').textContent = data.model;
+            document.getElementById('folderInfo').textContent = `📁 ${data.shared_folder}`;
+            }).catch(() => {
+            document.getElementById('modelInfo').textContent = 'Cargando...';
+            });
+        // Cargar archivos disponibles
+        async function loadFiles() {
+            try {
+                const res = await fetch('/health');
+                const data = await res.json();
+                // Nota: el backend no expone lista de archivos, pero el checkbox ya habilita la funcionalidad
+                document.getElementById('fileCount').textContent = '✅ Carpeta compartida activa';
+            } catch (e) {
+                document.getElementById('fileCount').textContent = '⚠️ Sin conexión';
+            }
+        }
+        loadFiles();
+
+        function addMessage(text, isUser) {
+            const div = document.createElement('div');
+            div.className = `message ${isUser ? 'user' : 'assistant'}`;
+            div.textContent = text;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        async function send() {
+            const input = document.getElementById('prompt');
+            const btn = document.getElementById('sendBtn');
+            const prompt = input.value.trim();
+            const useFiles = document.getElementById('useFiles').checked;
+
+            if (!prompt) return;
+
+            addMessage(prompt, true);
+            input.value = '';
+            btn.disabled = true;
+            status.textContent = '⏳ Pensando...';
+
+            try {
+                const res = await fetch(API, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({prompt, use_files: useFiles})
+                });
+                const data = await res.json();
+                addMessage(data.response || '⚠️ Sin respuesta', false);
+                status.textContent = '✅ Listo';
+            } catch (e) {
+                addMessage('❌ Error de conexión: ' + e.message, false);
+                status.textContent = '❌ Error';
+            } finally {
+                btn.disabled = false;
+                input.focus();
+            }
+        }
+    </script>
+</body>
+
+</html>
