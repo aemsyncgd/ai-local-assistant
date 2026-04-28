@@ -143,9 +143,13 @@ El script deploy-ai.sh te permite elegir entre varios modelos optimizados:
 
 Modelo                RAM Aprox.             Velocidad*            Calidad
 qwen2.5:0.5b          ~400 MB               ⚡⚡⚡⚡⚡          ⭐⭐⭐
+
 tinyllama:1.1b        ~700 MB               ⚡⚡⚡⚡            ⭐⭐⭐⭐
+
 llama3.2:1b           ~1.1 GB               ⚡⚡⚡              ⭐⭐⭐⭐⭐
+
 qwen2.5:1.5b          ~1.8 GB               ⚡⚡                 ⭐⭐⭐⭐⭐
+
 
 ## Variables de Entorno
 ```
