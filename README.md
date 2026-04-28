@@ -41,16 +41,17 @@
 
 ### Método 1: Script Automático (Recomendado)
 
-```bash
+```
+### bash
 # 1. Clonar repositorio
-git clone https://github.com/aems268/local-ai-assistant.git
-cd local-ai-assistant
+git clone https://github.com/aems268/local-ai-assistant.git ; cd local-ai-assistant ; podman build -t local-ai-assistant:latest .
 
 # 2. Dar permisos de ejecución
 chmod +x deploy-ai.sh
 
 # 3. Ejecutar asistente de despliegue
 ./deploy-ai.sh o ./deploy-full-ai.sh
+```
 
 ¡Listo! El script:
 
@@ -60,248 +61,262 @@ chmod +x deploy-ai.sh
     ✅ Configura volúmenes y puertos
     ✅ Inicia el contenedor automáticamente
 
-Método 2: Manual (Avanzado)
+## Método 2: Manual (Avanzado)
+```
+# Construir imagen desde los archivos locales
+podman build -t local-ai-assistant:latest .
 
-bash
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
+# Ejecutar contenedor con configuración base
+podman run -d --name ai-assistant \
+  --cpus 2 --memory 2g \
+  -v $(pwd)/shared:/shared:Z \
+  -p 8080:8080 -p 11434:11434 \
+  -e MODEL_NAME=qwen2.5:0.5b \
+  localhost/local-ai-assistant:latest
+```
 
-🎯 Uso
+
+## 🎯 Uso
 Acceso a la Interfaz Web
 Una vez desplegado, abre tu navegador en:
-
-1
+```
+http://localhost:8080
+```
 
 API REST
 También puedes usar la API directamente:
+```
+# Health check - verificar estado del servicio
+curl http://localhost:8080/health
 
-bash
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
+# Consulta simple - pregunta directa a la IA
+curl -X POST http://localhost:8080/ask \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "¿Qué es Podman?", "use_files": false}'
+
+# Consulta con archivos - la IA analiza tus documentos
+curl -X POST http://localhost:8080/ask \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Analiza mis archivos", "use_files": true}'
+```
 
 Ejemplos de Uso
-📄 Analizar configuración de red
+## 📄 Analizar configuración de red
+```
+# 1. Coloca tu archivo en la carpeta compartida
+cat > shared/olt-config.txt << 'EOF'
+OLT-ZONA
+IP: 192.168.100.1
+SNMP: public
+VLANs: 100,200,300
+EOF
 
-bash
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
+# 2. Pregunta a la IA sobre ese archivo
+curl -X POST http://localhost:8080/ask \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "¿Qué VLANs están configuradas en mi OLT?",
+    "use_files": true
+  }'
 
-🔧 Generar script de monitoreo
+Respuesta esperada
+{
+  "response": "Según el archivo olt-config.txt, las VLANs configuradas son: 100, 200 y 300."
+}
+```
 
-bash
-1
-2
-3
-4
-5
-6
 
-️ Configuración
-Modelos Disponibles
+## 🔧 Generar script de monitoreo
+```
+curl -X POST http://localhost:8080/ask \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Genera un script bash para monitorear temperatura de OLT via SNMP cada 60s",
+    "use_files": false
+  }'
+```
+
+
+️## Configuración
+### Modelos Disponibles
 El script deploy-ai.sh te permite elegir entre varios modelos optimizados:
-Modelo
-	
-RAM
-	
-Velocidad
-	
-Calidad
-	
-Ideal para
-qwen2.5:0.5b
-	
-400MB
-	
-⚡⚡⚡
-	
-⭐⭐⭐
-	
-Hardware antiguo
-tinyllama:1.1b
-	
-700MB
-	
-⚡⚡⚡⚡
-	
-⭐⭐⭐
-	
-Uso general
-llama3.2:1b
-	
-1.1GB
-	
-⚡⚡
-	
-⭐⭐⭐⭐⭐
-	
-Calidad premium
-qwen2.5:1.5b
-	
-1.8GB
-	
-⚡
-	
-⭐⭐⭐⭐⭐
-	
-Hardware potente
-Variables de Entorno
 
-bash
-1
-2
-3
-4
+Modelo                RAM Aprox.             Velocidad*            Calidad
+qwen2.5:0.5b          ~400 MB               ⚡⚡⚡⚡⚡          ⭐⭐⭐
+tinyllama:1.1b        ~700 MB               ⚡⚡⚡⚡            ⭐⭐⭐⭐
+llama3.2:1b           ~1.1 GB               ⚡⚡⚡              ⭐⭐⭐⭐⭐
+qwen2.5:1.5b          ~1.8 GB               ⚡⚡                 ⭐⭐⭐⭐⭐
 
-Gestión del Contenedor
+## Variables de Entorno
+```
+# Modelo de IA a utilizar
+export MODEL_NAME="qwen2.5:0.5b"
 
-bash
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
+# Tiempo que el modelo permanece cargado en RAM
+export OLLAMA_KEEP_ALIVE="24h"
 
-📁 Estructura del Proyecto
+# Tamaño máximo del contexto de conversación
+export OLLAMA_CONTEXT_LENGTH="2048"
 
-1
-2
-3
-4
-5
-6
-7
-8
-9
+# Número de peticiones paralelas permitidas
+export OLLAMA_NUM_PARALLEL="1"
+```
 
-🔧 Arquitectura
+## Gestión del Contenedor
+```
+# Verificar estado del contenedor
+podman ps -f name=ai-assistant
 
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
+# Ver logs en tiempo real
+podman logs -f ai-assistant
+
+# Detener contenedor (conserva datos)
+podman stop ai-assistant
+
+# Reiniciar contenedor
+podman restart ai-assistant
+
+# Eliminar contenedor (la imagen se conserva)
+podman rm -f ai-assistant
+
+# Ver consumo de recursos en tiempo real
+podman stats ai-assistant
+
+# Acceder a shell dentro del contenedor
+podman exec -it ai-assistant /bin/bash
+```
+
+
+## 📁 Estructura del Proyecto
+
+local-ai-assistant/
+├── Containerfile          # Definición del contenedor Podman
+├── assistant.py           # Backend FastAPI + integración con Ollama
+├── index.html             # Interfaz web de chat (HTML+JS)
+├── entrypoint.sh          # Script de inicialización del contenedor
+├── deploy-ai.sh           # Script de despliegue inteligente (CLI)
+├── shared/                # Volumen compartido para tus archivos
+│   └── .gitkeep           # Marcador para rastrear carpeta vacía
+├── .gitignore             # Archivos excluidos de Git
+└── README.md              # Este archivo de documentación
+
+## 🔧 Arquitectura
+┌─────────────────────────────────────┐
+│         NAVEGADOR WEB               │
+│    http://localhost:8080            │
+└────────────┬────────────────────────┘
+             │ HTTP/JSON
+             ▼
+┌──────────────────────────────────────┐
+│         FastAPI (assistant.py)       │
+│  • POST /ask   → Consulta a la IA    │
+│  • GET  /health → Estado del servicio│
+│  • Lee archivos de /shared           │
+│  • Inyecta contexto en el prompt     │
+└────────────┬─────────────────────────┘
+             │ API interna
+             ▼
+┌─────────────────────────────────────┐
+│         Ollama Server               │
+│         Puerto 11434                │
+│  • Carga el modelo seleccionado     │
+│  • Ejecuta inferencia en CPU        │
+│  • Devuelve respuesta generada      │
+└─────────────────────────────────────┘
+
 
 🐛 Troubleshooting
-El contenedor no inicia
+### El contenedor no inicia
+```
+# Verificar logs para diagnóstico
+podman logs ai-assistant
 
-bash
-1
-2
-3
-4
-5
-6
-7
-8
+# Verificar si los puertos están ocupados
+sudo netstat -tlnp | grep -E '8080|11434'
 
-Error "OOM-killed"
+# Verificar memoria disponible en el host
+free -h
+```
 
-bash
-1
-2
-3
-4
-5
+### Error "OOM-killed"
+```
+# El modelo requiere más RAM de la asignada
+# Solución: aumentar memoria al recrear
 
-La web no responde
+podman rm -f ai-assistant
+podman run -d --name ai-assistant \
+  --cpus 2 --memory 3g \  # ← Aumentar de 2g a 3g
+  -v $(pwd)/shared:/shared:Z \
+  -p 8080:8080 -p 11434:11434 \
+  -e MODEL_NAME=qwen2.5:0.5b \  # ← O usar modelo más ligero
+  localhost/local-ai-assistant:latest
+```
 
-bash
-1
-2
-3
-4
-5
-6
-7
-8
-9
+### La web no responde
+```
+# 1. Verificar que el contenedor está corriendo
+podman ps | grep ai-assistant
 
-Modelo muy lento
+# 2. Probar API directamente (sin navegador)
+curl http://localhost:8080/health
 
-bash
-1
-2
-3
-4
-5
-6
+# 3. Si usas Fedora/RHEL con SELinux:
+getenforce
+# Si devuelve "Enforcing", recrear con etiqueta :Z
+podman run -d ... -v ./shared:/shared:Z ...
+```
 
-🤝 Contribuir
+
+### Respuestas muy lentas
+```
+# Opción A: Usar modelo más ligero
+./deploy-ai.sh
+# Seleccionar: qwen2.5:0.5b
+
+# Opción B: Reducir tamaño de contexto
+export OLLAMA_CONTEXT_LENGTH=1024
+
+# Opción C: Limitar peticiones paralelas
+export OLLAMA_NUM_PARALLEL=1
+```
+
+### Error de tiempo en apt (build)
+```
+# Causa: reloj del sistema desincronizado
+# Solución: sincronizar hora
+
+sudo timedatectl set-ntp true
+# o manualmente:
+sudo ntpdate pool.ntp.org
+sudo hwclock --systohc
+
+# Workaround temporal en Containerfile:
+# Agregar flag: -o Acquire::Check-Valid-Until=false
+```
+
+## 🤝 Contribuir
 ¡Las contribuciones son bienvenidas! 
 
-bash
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
+```
+# 1. Fork del repositorio desde GitHub
 
-📄 Licencia
+# 2. Clonar tu fork localmente
+git clone https://github.com/TU_USUARIO/local-ai-assistant.git
+cd local-ai-assistant
+
+# 3. Crear rama para tu funcionalidad
+git checkout -b feature/nueva-funcionalidad
+
+# 4. Realizar cambios y commit
+git add .
+git commit -m "✨ Agrega nueva funcionalidad: descripción breve"
+
+# 5. Push y crear Pull Request
+git push origin feature/nueva-funcionalidad
+# Luego visita GitHub para crear el PR
+```
+
+## 📄 Licencia
 Este proyecto está bajo la Licencia MIT - ver el archivo LICENSE
  para detalles.
 🙏 Agradecimientos
@@ -316,6 +331,6 @@ Este proyecto está bajo la Licencia MIT - ver el archivo LICENSE
 
 📬 Contacto
 
-    Proyecto: https://github.com/aems268/local-ai-assistant
+	Proyecto: https://github.com/aems268/local-ai-assistant
     Issues: Reportar bug
     Discusión: GitHub Discussions
